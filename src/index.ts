@@ -23,6 +23,9 @@ export interface JSONFormatterConfiguration {
   hoverPreviewEnabled?: boolean;
   hoverPreviewArrayCount?: number;
   hoverPreviewFieldCount?: number;
+  previewEnabled?: boolean;
+  previewArrayCount?: number;
+  previewFieldCount?: number;
   animateOpen?: boolean;
   animateClose?: boolean;
   theme?: string;
@@ -34,8 +37,9 @@ export interface JSONFormatterConfiguration {
 
 const _defaultConfig: JSONFormatterConfiguration = {
   hoverPreviewEnabled: false,
-  hoverPreviewArrayCount: 100,
-  hoverPreviewFieldCount: 5,
+  previewEnabled: false,
+  previewArrayCount: 20,
+  previewFieldCount: 5,
   animateOpen: true,
   animateClose: true,
   theme: null,
@@ -70,19 +74,22 @@ export default class JSONFormatter {
    * @param {object} [config=defaultConfig] -
    *  defaultConfig = {
    *   hoverPreviewEnabled: false,
-   *   hoverPreviewArrayCount: 100,
-   *   hoverPreviewFieldCount: 5
+   *   previewArrayCount: 100,
+   *   previewFieldCount: 5
    * }
    *
    * Available configurations:
-   *  #####Hover Preview
-   * * `hoverPreviewEnabled`:  enable preview on hover
-   * * `hoverPreviewArrayCount`: number of array items to show in preview Any
+   *  #####Preview
+   * * `previewEnabled`:  enable preview whenever toggled closed
+   * * `previewArrayCount`: number of array items to show in preview Any
    *    array larger than this number will be shown as `Array[XXX]` where `XXX`
    *    is length of the array.
-   * * `hoverPreviewFieldCount`: number of object properties to show for object
+   * * `previewFieldCount`: number of object properties to show for object
    *   preview. Any object with more properties that thin number will be
    *   truncated.
+   * * `hoverPreviewEnabled`:  enable preview only on hover
+   * * `hoverPreviewArrayCount`: deprecated in favor of `previewArrayCount`
+   * * `hoverPreviewFieldCount`: deprecated in favor of `previewFieldCount`
    *
    * @param {string} [key=undefined] The key that this object in it's parent
    * context
@@ -94,14 +101,17 @@ export default class JSONFormatter {
   constructor(public json: any, private open = 1, private config: JSONFormatterConfiguration = _defaultConfig, private key?: string, private displayKey?: string, private path: string[] = [], private arrayRange?: [number, number]) {
 
     // Setting default values for config object
+    if (this.config.previewEnabled === undefined) {
+      this.config.previewEnabled = _defaultConfig.previewEnabled;
+    }
+    if (this.config.previewArrayCount === undefined) {
+      this.config.previewArrayCount = this.config.hoverPreviewArrayCount || _defaultConfig.previewArrayCount;
+    }
+    if (this.config.previewFieldCount === undefined) {
+      this.config.previewFieldCount = this.config.hoverPreviewFieldCount || _defaultConfig.previewFieldCount;
+    }
     if (this.config.hoverPreviewEnabled === undefined) {
       this.config.hoverPreviewEnabled = _defaultConfig.hoverPreviewEnabled;
-    }
-    if (this.config.hoverPreviewArrayCount === undefined) {
-      this.config.hoverPreviewArrayCount = _defaultConfig.hoverPreviewArrayCount;
-    }
-    if (this.config.hoverPreviewFieldCount === undefined) {
-      this.config.hoverPreviewFieldCount = _defaultConfig.hoverPreviewFieldCount;
     }
     if (this.config.useToJSON === undefined) {
       this.config.useToJSON = _defaultConfig.useToJSON;
@@ -303,32 +313,54 @@ export default class JSONFormatter {
   /**
    * Generates inline preview
    *
-   * @returns {string}
+   * @returns {Node}
   */
-  getInlinepreview() {
+  getInlinepreview() : Node {
+    const el = document.createElement('span');
+
     if (this.isArray) {
-
       // if array length is greater then 100 it shows "Array[101]"
-      if (this.json.length > this.config.hoverPreviewArrayCount) {
-        return `Array[${this.json.length}]`;
+      if (this.json.length > this.config.previewArrayCount) {
+        const constructorEl = createElement('span', 'constructor-name', 'Array');
+        const arrayEl = createElement('span');
+        arrayEl.appendChild(createElement('span', 'bracket', '['));
+        arrayEl.appendChild(createElement('span', 'bracket', `${this.json.length}`));
+        arrayEl.appendChild(createElement('span', 'bracket', ']'));
+        el.appendChild(constructorEl);
+        el.appendChild(arrayEl);
       } else {
-        return `[${this.json.map(getPreview).join(', ')}]`;
+        el.appendChild(createElement('span', 'bracket', '['));
+        for (let val of this.json) {
+          el.appendChild(getPreview(val));
+          if (val !== this.json[this.json.length - 1]) {
+            el.appendChild(document.createTextNode(", "));
+          }
+        }
+        el.appendChild(createElement('span', 'bracket', ']'));
       }
-    } else {
-
+    } else if (this.isObject && !this.isDate) {
+      el.appendChild(createElement('span', 'bracket', '{'));
       const keys = this.keys;
 
       // the first five keys (like Chrome Developer Tool)
-      const narrowKeys = keys.slice(0, this.config.hoverPreviewFieldCount);
+      const narrowKeys = keys.slice(0, this.config.previewFieldCount);
 
-      // json value schematic information
-      const kvs = narrowKeys.map(key => `${key}:${getPreview(this.json[key])}`);
+      for (let key of narrowKeys) {
+        el.appendChild(createElement('span', 'key', `${key}:`));
+        el.appendChild(createElement('span', 'boolean', getPreview(this.json[key])));
+
+        if (key !== narrowKeys[narrowKeys.length - 1]) {
+          el.appendChild(document.createTextNode(", "));
+        }
+      }
 
       // if keys count greater then 5 then show ellipsis
-      const ellipsis = keys.length >= this.config.hoverPreviewFieldCount ? '…' : '';
-
-      return `{${kvs.join(', ')}${ellipsis}}`;
+      const ellipsis = keys.length >= this.config.previewFieldCount ? '…' : '';
+      el.appendChild(document.createTextNode(ellipsis));
+      el.appendChild(createElement('span', 'bracket', '}'));
     }
+
+    return el;
   }
 
 
@@ -407,16 +439,16 @@ export default class JSONFormatter {
 
       // Append value content to value element
       const valuePreview = getValuePreview(this.type, this.json, this.useToJSON ? this.json.toJSON() : this.json);
-      value.appendChild(document.createTextNode(valuePreview));
+      value.appendChild(valuePreview);
 
       // append the value element to toggler link
       togglerLink.appendChild(value);
     }
 
     // if hover preview is enabled, append the inline preview element
-    if (this.isObject && this.config.hoverPreviewEnabled) {
+    if (this.isObject && this.config.hoverPreviewEnabled || this.config.previewEnabled) {
       const preview = createElement('span', 'preview-text');
-      preview.appendChild(document.createTextNode(this.getInlinepreview()));
+      preview.appendChild(this.getInlinepreview());
       togglerLink.appendChild(preview);
     }
 
@@ -433,6 +465,9 @@ export default class JSONFormatter {
     if (this.isEmpty) {
       children.classList.add(cssClass('empty'));
     }
+    if (this.isLargeArray) {
+      children.classList.add(cssClass('large-array'));
+    }
 
     // set CSS classes for root element
     if (this.config && this.config.theme) {
@@ -440,6 +475,9 @@ export default class JSONFormatter {
     }
     if (this.isOpen) {
       this.element.classList.add(cssClass('open'));
+    }
+    if (this.config.previewEnabled) {
+      this.element.classList.add(cssClass('preview'));
     }
 
     // append toggler and children elements to root element

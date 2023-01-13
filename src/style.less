@@ -32,6 +32,12 @@
       &.json-formatter-object:after { content: "No properties"; }
       &.json-formatter-array:after { content: "[]"; }
     }
+
+    &.json-formatter-large-array {
+      > .json-formatter-row.json-formatter-preview > a > .json-formatter-preview-text {
+        display: none;
+      }
+    }
   }
 
   .json-formatter-string, .json-formatter-stringifiable {
@@ -91,8 +97,18 @@
     transition: opacity .15s ease-in;
     font-style: italic;
   }
+
   &:hover > a > .json-formatter-preview-text {
     opacity: 0.6;
+  }
+
+  &.json-formatter-preview > a > .json-formatter-preview-text {
+    opacity: 1.0;
+    font-style: normal;
+  }
+
+  &.json-formatter-preview > .json-formatter-toggler-link > .json-formatter-value {
+    display: none;
   }
 
   // Open state
@@ -108,6 +124,9 @@
     }
     &.json-formatter-empty:after {
       display: block;
+    }
+    > .json-formatter-toggler-link > .json-formatter-value {
+      display: inline;
     }
   }
 }

@@ -46,35 +46,42 @@ export function getObjectName(object: Object):string {
 /*
  * Generates inline preview for a JavaScript object based on a type and value
 */
-export function getValuePreview (type: string, object: Object, value: string): string {
-  if (type === 'null' || type === 'undefined') { return type; }
+export function getValuePreview (type: string, object: Object, value: string): Element {
+  if (type === 'null' || type === 'undefined') {
+    return createElement('span', 'null', type);
+  }
 
   if (type === 'string' || type === 'stringifiable') {
-    value = '"' + escapeString(value) + '"';
+    return createElement('span', 'string', '"' + escapeString(value) + '"');
   }
   if (type === 'function'){
 
     // Remove content of the function
-    return object.toString()
+    const functionName = object.toString()
         .replace(/[\r\n]/g, '')
         .replace(/\{.*\}/, '') + '{…}';
+    return createElement('span', 'function', functionName);
   }
-  return value;
+
+  return createElement('span', '', value);
 }
 
 /*
  * Generates inline preview for a JavaScript object
 */
-export function getPreview(object: any): string {
-  let value = '';
+export function getPreview(object: any): Element {
   if (isObject(object)) {
-    value = getObjectName(object);
-    if (Array.isArray(object))
-      value += '[' + object.length + ']';
+    const el = document.createElement('span');
+    el.appendChild(createElement('span', 'constructor-name', getObjectName(object)));
+    if (Array.isArray(object)) {
+      el.appendChild(createElement('span', 'bracket', '['));
+      el.appendChild(createElement('span', 'number', `${object.length}`));
+      el.appendChild(createElement('span', 'bracket', ']'));
+    }
+    return el;
   } else {
-    value = getValuePreview(getType(object), object, object);
+    return getValuePreview(getType(object), object, object);
   }
-  return value;
 }
 
 /*
