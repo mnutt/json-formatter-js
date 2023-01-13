@@ -192,3 +192,19 @@ describe('toggleOpen before any rendering', () => {
         expect(element.outerHTML).not.toContain('depth4');
     });
 });
+
+describe('previewEnabled', () => {
+    it('should display the preview for an object', () => {
+        const obj = { a: "text", b: [ 1, 2 ], c: { d: "inner" } };
+        const formatter = new JSONFormatter(obj, 0, { previewEnabled: true });
+        const element = formatter.render();
+        expect(element.textContent).toEqual("Object{a:\"text\", b:Array[2], c:Object}");
+    });
+
+    it('should display the preview for an array', () => {
+        const obj = ["text", [1, 2], { foo: "bar" }];
+        const formatter = new JSONFormatter(obj, 0, { previewEnabled: true });
+        const element = formatter.render();
+        expect(element.textContent).toEqual("Array[3][\"text\", Array[2], Object]");
+    });
+});
