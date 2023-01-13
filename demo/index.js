@@ -42,6 +42,7 @@ var deep = { a: { b: { c: { d: {} } } } };
 
 var examples = [
   { title: "Complex", json: complex },
+  { title: "Complex w/preview", json: complex, open: 0, config: { previewEnabled: true } },
   { title: "Number", json: 42 },
   { title: "null", json: null },
   { title: "Empty Object", json: Object.create(null) },
@@ -66,7 +67,8 @@ var result = document.querySelector(".result");
 
 examples.forEach(function (example) {
   var title = document.createElement("h3");
-  var formatter = new JSONFormatter(example.json, 1, example.config);
+  var open = typeof(example.open) === 'undefined' ? 1 : example.open;
+  var formatter = new JSONFormatter(example.json, open, example.config);
 
   title.innerText = example.title;
 
@@ -83,7 +85,7 @@ examples.forEach(function (example) {
 fetch("demo/giant.json").then(function (resp) {
   resp.json().then(function (giant) {
     var giantFormatter = new JSONFormatter(giant, 2, {
-      hoverPreviewEnabled: true,
+      previewEnabled: true,
     });
     var title = document.createElement("h3");
 
