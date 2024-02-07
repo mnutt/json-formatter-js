@@ -1,5 +1,5 @@
 {
-  "name": "@movableink/json-formatter-js",
+  "name": "@movable/json-formatter-js",
   "version": "2.5.0",
   "description": "JSON Formatter core library ",
   "main": "dist/json-formatter.cjs.js",
